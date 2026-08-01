@@ -52,12 +52,18 @@ Then:
 from __future__ import annotations
 
 import json
+import os
 import socket
 import struct
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 
 # --------------------------------------------------------------------------
@@ -223,7 +229,7 @@ if __name__ == "__main__":
     #   python3 defects4j_oracle.py
     from hdd_loc import HierarchicalDeltaDebugger
 
-    buggy = JavaHarnessClient(classpath=".", adapter_class="SumAdapterBuggy", port=45001)
+    buggy = JavaHarnessClient(classpath=".", adapter_class="SumAdapter", port=45001)
     golden = JavaHarnessClient(classpath=".", adapter_class="SumAdapterFixed", port=45002)
 
     with buggy, golden:

@@ -8,13 +8,29 @@ The pipeline is:
 
 from __future__ import annotations
 
+import csv
+import math
 import os
 from importlib.util import module_from_spec, spec_from_file_location
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from hdd_baseline import HierarchicalDeltaDebugger as HDDBaselineDebugger
 from hdd_algorithm import HDDResult, HierarchicalDeltaDebugger
 from line_localization import collect_line_coverage, test_cases_from_hdd_result
+from line_localization_baseline import collect_line_coverage as collect_line_coverage_baseline
+from line_localization_baseline import test_cases_from_hdd_result as test_cases_from_hdd_result_baseline
+from sbfl_baseline import rank_lines as rank_lines_baseline
 from sbfl_score import rank_lines, render_report
+
+
+FORMULA_SPECS: List[Tuple[str, str]] = [
+    ("Ochiai", "ochiai"),
+    ("Tarantula", "tarantula"),
+    ("Jaccard", "jaccard"),
+    ("DStar", "dstar2"),
+]
+
+KNOWN_FAULTY_LINES: Sequence[int] = (4,)
 
 
 def _load_program(program_path: str):
@@ -48,6 +64,77 @@ def _build_oracle(program_path: str, reference_path: Optional[str] = None):
     return oracle
 
 
+def _first_fault_rank(ranking: List[Tuple[int, float, Any]], faulty_lines: Sequence[int]) -> int:
+    for index, (line_no, _, _) in enumerate(ranking, start=1):
+        if line_no in faulty_lines:
+            return index
+    return len(ranking) + 1 if ranking else 1
+
+
+def _top_n_hit(ranking: List[Tuple[int, float, Any]], faulty_lines: Sequence[int], top_n: int) -> bool:
+    ranked_lines = {line_no for line_no, _, _ in ranking[:top_n]}
+    return any(line in ranked_lines for line in faulty_lines)
+
+
+def _exam_score(first_rank: int, total_lines: int) -> float:
+    if total_lines <= 0:
+        return 0.0
+    return first_rank / float(total_lines)
+
+
+def _compute_metrics(ranking: List[Tuple[int, float, Any]], faulty_lines: Sequence[int]) -> Dict[str, float]:
+    total_lines = len(ranking)
+    first_rank = _first_fault_rank(ranking, faulty_lines)
+    return {
+        "Exam_Score": _exam_score(first_rank, total_lines),
+        "First_Fault_Rank": float(first_rank),
+        "Top_1": 1.0 if _top_n_hit(ranking, faulty_lines, 1) else 0.0,
+        "Top_3": 1.0 if _top_n_hit(ranking, faulty_lines, 3) else 0.0,
+        "Top_5": 1.0 if _top_n_hit(ranking, faulty_lines, 5) else 0.0,
+        "Top_10": 1.0 if _top_n_hit(ranking, faulty_lines, 10) else 0.0,
+    }
+
+
+def _run_weighted_and_baseline(
+    structured_input: Any,
+    program_path: str,
+    reference_path: Optional[str],
+    entry_function: str,
+    formula_label: str,
+    formula_name: str,
+    faulty_lines: Sequence[int],
+) -> List[Dict[str, Any]]:
+    oracle = _build_oracle(program_path, reference_path=reference_path)
+
+    weighted_debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting="subtree_size")
+    weighted_result = weighted_debugger.reduce(structured_input)
+    weighted_cases = test_cases_from_hdd_result(weighted_result, weighted_debugger)
+    weighted_coverage = collect_line_coverage(program_path, weighted_cases, entry_function=entry_function)
+    weighted_ranking = rank_lines(weighted_coverage, formula=formula_name, normalize=True)
+    weighted_metrics = _compute_metrics(weighted_ranking, faulty_lines)
+
+    baseline_debugger = HDDBaselineDebugger(oracle=oracle)
+    baseline_result = baseline_debugger.reduce(structured_input)
+    baseline_cases = test_cases_from_hdd_result_baseline(baseline_result, baseline_debugger)
+    baseline_coverage = collect_line_coverage_baseline(program_path, baseline_cases, entry_function=entry_function)
+    baseline_ranking = rank_lines_baseline(baseline_coverage, formula=formula_name, normalize=True)
+    baseline_metrics = _compute_metrics(baseline_ranking, faulty_lines)
+
+    rows: List[Dict[str, Any]] = []
+    for method_name, metrics in (("Weighted", weighted_metrics), ("Baseline", baseline_metrics)):
+        row = {
+            "Program": os.path.basename(program_path),
+            "Formula": formula_label,
+            "Method": method_name,
+            "Faulty_Lines": ";".join(str(line) for line in faulty_lines),
+            "Total_Lines": float(len(weighted_ranking)),
+        }
+        row.update(metrics)
+        rows.append(row)
+
+    return rows
+
+
 def run_pipeline(
     structured_input: Any,
     program_path: str,
@@ -74,5 +161,37 @@ if __name__ == "__main__":
     root = os.path.dirname(os.path.abspath(__file__))
     program_path = os.path.join(root, "sample_buggy_program.py")
     reference_path = os.path.join(root, "sample_fixed_program.py")
-    _, _, report = run_pipeline(sample_input, program_path, reference_path=reference_path, top_n=5)
-    print(report)
+    comparison_rows: List[Dict[str, Any]] = []
+    for formula_label, formula_name in FORMULA_SPECS:
+        comparison_rows.extend(
+            _run_weighted_and_baseline(
+                structured_input=sample_input,
+                program_path=program_path,
+                reference_path=reference_path,
+                entry_function="run",
+                formula_label=formula_label,
+                formula_name=formula_name,
+                faulty_lines=KNOWN_FAULTY_LINES,
+            )
+        )
+
+    outpath = os.path.join(root, "sbfl_comparison_metrics.csv")
+    fieldnames = [
+        "Program",
+        "Formula",
+        "Method",
+        "Faulty_Lines",
+        "Total_Lines",
+        "Exam_Score",
+        "First_Fault_Rank",
+        "Top_1",
+        "Top_3",
+        "Top_5",
+        "Top_10",
+    ]
+    with open(outpath, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(comparison_rows)
+
+    print(f"Wrote baseline-vs-weighted evaluation metrics to {outpath}")

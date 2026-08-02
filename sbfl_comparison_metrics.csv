@@ -1,0 +1,9 @@
+Program,Formula,Method,Faulty_Lines,Total_Lines,Exam_Score,First_Fault_Rank,Top_1,Top_3,Top_5,Top_10
+sample_buggy_program.py,Ochiai,Weighted,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,Ochiai,Baseline,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,Tarantula,Weighted,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,Tarantula,Baseline,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,Jaccard,Weighted,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,Jaccard,Baseline,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,DStar,Weighted,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0
+sample_buggy_program.py,DStar,Baseline,4,5.0,0.6,3.0,0.0,1.0,1.0,1.0

@@ -87,7 +87,7 @@ class TestRecord:
     test_id: int
     active_ids: FrozenSet[int]  # every node id present in this test's candidate
     failed: bool  # oracle verdict: True = still reproduces the failure
-    weight: float  # WDD weight of the partition/element this test evaluated
+    weight: float  # Inverse WDD weight used for downstream fault-localization scoring
     trial_node_id: Optional[int]  # single node this test isolates; None for multi-element tests / baseline
     trial_depth: Optional[int]  # depth of the container level this test was run at
 
@@ -252,12 +252,13 @@ class HierarchicalDeltaDebugger:
     ) -> bool:
         candidate = self._materialize(self.root, active_ids)
         failed = bool(self.oracle(candidate))
+        recorded_weight = 1.0 / weight if weight else 0.0
         self._records.append(
             TestRecord(
                 test_id=next(self._test_counter),
                 active_ids=frozenset(active_ids),
                 failed=failed,
-                weight=weight,
+                weight=recorded_weight,
                 trial_node_id=trial_node_id,
                 trial_depth=trial_depth,
             )

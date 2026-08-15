@@ -128,19 +128,4 @@ def compare_rankings(baseline_ranking: List[Tuple[int, float, LineSpectrum]], we
 
 
 if __name__ == "__main__":
-    # Quick smoke test: import baseline modules and run demo flow.
-    from hdd_baseline import HierarchicalDeltaDebugger
-    from line_localization_baseline import test_cases_from_hdd_result, collect_line_coverage
-
-    sample_input = {"items": [{"value": 1}, {"value": 2}, {"value": "BUG"}, {"value": 3}]}
-    program_path = "sample_buggy_program.py"
-
-    def oracle(candidate: Any) -> bool:
-        return any(v == "BUG" for v in (candidate.get("items") if isinstance(candidate, dict) else [])) if isinstance(candidate, dict) else False
-
-    debugger = HierarchicalDeltaDebugger(oracle=oracle)
-    result = debugger.reduce(sample_input)
-    test_cases = test_cases_from_hdd_result(result, debugger)
-    coverage = collect_line_coverage(program_path, test_cases)
-    ranking = rank_lines(coverage)
-    print(render_report(program_path, ranking, top_n=5))
+    print("Import sbfl_baseline from this module and call rank_lines() from your own pipeline.")

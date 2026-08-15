@@ -145,23 +145,4 @@ def classify_lines(program_path: str) -> Dict[int, str]:
 
 
 if __name__ == "__main__":
-    from hdd_baseline import HierarchicalDeltaDebugger
-
-    sample_input = {"items": [{"value": 1}, {"value": 2}, {"value": "BUG"}, {"value": 3}]}
-    program_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "buggy_sample.py")
-    program_module = _load_program(program_path)
-
-    def oracle(candidate: Any) -> bool:
-        try:
-            program_module.run(candidate)
-            return False
-        except Exception:
-            return True
-
-    debugger = HierarchicalDeltaDebugger(oracle=oracle)
-    hdd_result = debugger.reduce(sample_input)
-    print("Minimal failing input:", hdd_result.minimal_failing_input)
-
-    test_cases = test_cases_from_hdd_result(hdd_result, debugger)
-    coverage = collect_line_coverage(program_path, test_cases)
-    print(f"Collected {len(coverage)} coverage records")
+    print("Import the baseline helpers from this module and drive them from main_pipeline.py.")

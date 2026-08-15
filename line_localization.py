@@ -282,45 +282,4 @@ def classify_lines(program_path: str) -> Dict[int, LineClassification]:
 
 
 if __name__ == "__main__":
-    from hdd_loc import HierarchicalDeltaDebugger
-    import sbfl
-
-    sample_input = {
-        "items": [
-            {"value": 1},
-            {"value": 2},
-            {"value": "BUG"},
-            {"value": 3},
-        ]
-    }
-
-    program_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "buggy_sample.py")
-    program_module = _load_program(program_path)
-
-    def oracle(candidate: Any) -> bool:
-        try:
-            program_module.run(candidate)
-            return False
-        except Exception:
-            return True
-
-    debugger = HierarchicalDeltaDebugger(oracle=oracle)
-    hdd_result = debugger.reduce(sample_input)
-    print("Minimal failing input:", hdd_result.minimal_failing_input)
-
-    test_cases = test_cases_from_hdd_result(hdd_result, debugger)
-    coverage = collect_line_coverage(program_path, test_cases)
-
-    base_ranking = sbfl.rank_lines(coverage, formula="ochiai")
-    print("--- base line ranking (coverage only) ---")
-    print(sbfl.render_line_report(program_path, base_ranking))
-
-    classification = classify_lines(program_path)
-    print("\n--- line classification ---")
-    for line in sorted(classification):
-        info = classification[line]
-        print(f"  L{line}: {info.role} (controlling_predicate={info.controlling_predicate})")
-
-    predicate_ranking = sbfl.rank_lines_with_predicate_context(coverage, classification, formula="ochiai")
-    print("\n--- predicate-context-weighted line ranking ---")
-    print(sbfl.render_line_report(program_path, predicate_ranking))
+    print("Import collect_line_coverage and classify_lines from this module and drive them from main_pipeline.py.")

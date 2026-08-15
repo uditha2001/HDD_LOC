@@ -6,7 +6,7 @@
 
 library(ggplot2)
 
-metrics_path <- "sbfl_comparison_metrics.csv"
+metrics_path <- "black2_results.csv"
 if (!file.exists(metrics_path)) {
   stop("Missing ", metrics_path, ". Run `python main_pipeline.py` first to generate the comparison metrics.")
 }

@@ -456,40 +456,4 @@ def empty_oracle(_: Any) -> bool:
 
 
 if __name__ == "__main__":
-    # Small demo: a nested structure where a leaf value "BUG" at depth 3
-    # triggers the failure, buried inside several innocent siblings.
-    sample_input = {
-        "a": [1, 2, {"x": "ok", "y": "BUG"}],
-        "b": [3, 4, 5],
-        "c": {"nested": ["fine", "also fine"]},
-    }
-
-    def oracle(candidate: Any) -> bool:
-        def contains_bug(value: Any) -> bool:
-            if value == "BUG":
-                return True
-            if isinstance(value, dict):
-                return any(contains_bug(v) for v in value.values())
-            if isinstance(value, (list, tuple, set)):
-                return any(contains_bug(v) for v in value)
-            return False
-
-        return contains_bug(candidate)
-
-    for label, weighting in [("uniform (classic ddmin-style)", "uniform"), ("subtree_size (Wddmin-style)", "subtree_size")]:
-        debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting=weighting)
-        result = debugger.reduce(sample_input)
-        print(f"[{label}] minimal input: {result.minimal_failing_input}  "
-              f"({len(result.test_records)} tests)")
-
-    print()
-    debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting="subtree_size")
-    result = debugger.reduce(sample_input)
-
-    print("Test cases returned (candidate coverage, pass/fail, weight):")
-    for record in result.test_records:
-        print(
-            f"  test_id={record.test_id:<3} failed={record.failed!s:<5} "
-            f"weight={record.weight:<4g} trial_depth={record.trial_depth} "
-            f"n_active_nodes={len(record.active_ids)}"
-        )
+    print("Import HierarchicalDeltaDebugger from this module and wire the oracle in main_pipeline.py.")

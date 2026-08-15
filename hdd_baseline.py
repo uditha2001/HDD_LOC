@@ -259,21 +259,4 @@ def empty_oracle(_: Any) -> bool:
 
 
 if __name__ == "__main__":
-    sample_input = {"a": [1, 2, {"x": "ok", "y": "BUG"}], "b": [3, 4, 5], "c": {"nested": ["fine", "also fine"]}}
-
-    def oracle(candidate: Any) -> bool:
-        def contains_bug(value: Any) -> bool:
-            if value == "BUG":
-                return True
-            if isinstance(value, dict):
-                return any(contains_bug(v) for v in value.values())
-            if isinstance(value, (list, tuple, set)):
-                return any(contains_bug(v) for v in value)
-            return False
-
-        return contains_bug(candidate)
-
-    debugger = HierarchicalDeltaDebugger(oracle=oracle)
-    result = debugger.reduce(sample_input)
-    print("Baseline minimal:", result.minimal_failing_input)
-    print("Returned tests:", len(result.test_records))
+    print("Import HierarchicalDeltaDebugger from this module and wire the oracle in main_pipeline.py.")

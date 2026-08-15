@@ -126,14 +126,4 @@ def render_report(program_path: str, ranking: List[Tuple[int, float, LineSpectru
 
 
 if __name__ == "__main__":
-    from hdd_loc import HierarchicalDeltaDebugger
-
-    sample_input = {"items": [{"value": 1}, {"value": 2}, {"value": "BUG"}, {"value": 3}]}
-
-    def oracle(candidate):
-        return any(value == "BUG" for value in candidate.values()) if isinstance(candidate, dict) else False
-
-    debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting="subtree_size")
-    result = debugger.reduce(sample_input)
-    ranking = rank_lines_from_hdd_result(result, debugger, "sample_buggy_program.py")
-    print(render_report("sample_buggy_program.py", ranking, top_n=5))
+    print("Import sbfl_score from this module and call rank_lines_from_hdd_result() from your own pipeline.")

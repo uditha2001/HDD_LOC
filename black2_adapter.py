@@ -176,7 +176,7 @@ class Black2Adapter:
             # Added --source to force tracking of black source files + switched to python3
             python_command = (
                 f"export COVERAGE_FILE={shlex.quote(str(container_coverage_file))}; "
-                f"python3 -m coverage run --source={shlex.quote(str(container_project_root))} "
+                f"python3 -m coverage run --source=black "
                 f"{shlex.quote(str(container_runner_file))} "
                 f"{shlex.quote(str(container_project_root))} "
                 f"{shlex.quote(str(container_candidate_file))}"

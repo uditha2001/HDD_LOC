@@ -1,9 +1,9 @@
 Program,Formula,Method,Faulty_Lines,Total_Lines,Exam_Score,First_Fault_Rank,Top_1,Top_3,Top_5,Top_10
-fmtonoff.py,Ochiai,Weighted,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,Ochiai,Baseline,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,Tarantula,Weighted,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,Tarantula,Baseline,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,Jaccard,Weighted,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,Jaccard,Baseline,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,DStar,Weighted,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
-fmtonoff.py,DStar,Baseline,1325,15.0,1.0666666666666667,16.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Ochiai,Weighted,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Ochiai,Baseline,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Tarantula,Weighted,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Tarantula,Baseline,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Jaccard,Weighted,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,Jaccard,Baseline,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,DStar,Weighted,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0
+fmtonoff.py,DStar,Baseline,1325,1205.0,0.6804979253112033,820.0,0.0,0.0,0.0,0.0

@@ -26,6 +26,16 @@ from line_localization_baseline import LineCoverageRecord as BaselineLineCoverag
 from line_localization_baseline import test_cases_from_hdd_result as test_cases_from_hdd_result_baseline
 from sbfl_baseline import rank_lines as rank_lines_baseline
 from sbfl_score import rank_lines, render_report
+from execution_records import (
+    CandidateEvaluation,
+    ExecutionRecord,
+    Outcome,
+    RecordingOracle,
+    SourceLocation,
+    build_execution_records,
+    write_execution_records_jsonl,
+)
+from local_adapter import LocalDifferentialAdapter
 
 
 FORMULA_SPECS: List[Tuple[str, str]] = [
@@ -109,6 +119,69 @@ def build_black2_oracle(
         return adapter.oracle(_candidate_to_source(candidate))
 
     return oracle, adapter
+
+
+def collect_local_hdd_execution_records(
+    structured_input: Any,
+    program_path: str,
+    reference_path: str,
+    entry_function: str = "run",
+    weighting: str = "subtree_size",
+    records_output_path: Optional[str] = None,
+) -> Tuple[HDDResult, Tuple[ExecutionRecord, ...]]:
+    """Run HDD once while collecting canonical local execution records."""
+
+    adapter = LocalDifferentialAdapter(
+        buggy_program=program_path,
+        fixed_program=reference_path,
+        entry_function=entry_function,
+    )
+    oracle = RecordingOracle(adapter.evaluate)
+    debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting=weighting)
+    result = debugger.reduce(structured_input)
+    records = build_execution_records(result, oracle.observations)
+    if records_output_path is not None:
+        write_execution_records_jsonl(records, records_output_path)
+    return result, records
+
+
+def collect_black2_hdd_execution_records(
+    structured_input: Any,
+    buggy_root: Optional[str] = None,
+    fixed_root: Optional[str] = None,
+    timeout: int = 30,
+    weighting: str = "subtree_size",
+    records_output_path: Optional[str] = None,
+) -> Tuple[HDDResult, Tuple[ExecutionRecord, ...]]:
+    """Run Black HDD once; oracle outcome and coverage share one execution."""
+
+    adapter = Black2Adapter(
+        buggy_root=buggy_root or BLACK2_BUGGY_ROOT,
+        fixed_root=fixed_root or BLACK2_FIXED_ROOT,
+        timeout=timeout,
+        collect_coverage=True,
+    )
+
+    def evaluator(candidate: Any) -> CandidateEvaluation:
+        result = adapter.evaluate(_candidate_to_source(candidate))
+        return CandidateEvaluation(
+            outcome=Outcome(result.outcome),
+            coverage=frozenset(
+                SourceLocation(filename, line)
+                for filename, line in result.coverage
+            ),
+            structurally_valid=result.structurally_valid,
+            semantically_valid=result.semantically_valid,
+            runtime_ms=result.runtime_ms,
+        )
+
+    oracle = RecordingOracle(evaluator, serializer=_candidate_to_source)
+    debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting=weighting)
+    result = debugger.reduce(structured_input)
+    records = build_execution_records(result, oracle.observations)
+    if records_output_path is not None:
+        write_execution_records_jsonl(records, records_output_path)
+    return result, records
 
 
 def _evaluate_black2_test_cases(

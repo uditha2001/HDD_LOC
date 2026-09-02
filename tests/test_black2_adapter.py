@@ -52,6 +52,31 @@ def test_evaluate_reports_pass_when_outputs_match(tmp_path):
     assert result.buggy_output == result.fixed_output
 
 
+def test_evaluate_reports_invalid_when_both_versions_reject_candidate(tmp_path):
+    buggy_root = tmp_path / "buggy"
+    fixed_root = tmp_path / "fixed"
+    buggy_root.mkdir()
+    fixed_root.mkdir()
+
+    adapter = Black2Adapter(buggy_root=buggy_root, fixed_root=fixed_root, collect_coverage=False)
+
+    def fake_run_version(project_root, candidate_file, runner_file, coverage_file, use_coverage):
+        return {
+            "kind": "exception",
+            "exception_type": "InvalidInput",
+            "message": "cannot parse candidate",
+        }
+
+    adapter._run_version = fake_run_version  # type: ignore[method-assign]
+
+    result = adapter.evaluate("not valid python")
+
+    assert result.outcome == "INVALID"
+    assert result.structurally_valid is False
+    assert result.semantically_valid is False
+    assert adapter.oracle("not valid python") is False
+
+
 def test_run_version_builds_docker_exec_command(tmp_path, monkeypatch):
     workspace_root = tmp_path / "bugs_workspace"
     buggy_root = workspace_root / "black_2_buggy" / "black"

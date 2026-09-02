@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +35,10 @@ class EvaluationResult:
     coverage: set[tuple[str, int]]
 
     candidate_size: int
+
+    structurally_valid: bool = True
+    semantically_valid: bool = True
+    runtime_ms: float = 0.0
 
 
 class Black2Adapter:
@@ -67,6 +72,7 @@ class Black2Adapter:
             they behave the same.
         """
 
+        started = time.perf_counter()
         with tempfile.TemporaryDirectory(prefix="hddloc_black2_", dir=str(self.workspace_root)) as temp:
             temp_dir = Path(temp)
 
@@ -105,7 +111,9 @@ class Black2Adapter:
             # Differential semantic oracle
             # ---------------------------------------------
 
-            bug_preserved = self._bug_is_preserved(buggy_result, fixed_result)
+            outcome, structurally_valid, semantically_valid = self._classify_outcome(
+                buggy_result, fixed_result
+            )
 
             # ---------------------------------------------
             # Read buggy-program coverage
@@ -116,17 +124,57 @@ class Black2Adapter:
                 coverage = self._read_coverage(coverage_file, temp_dir)
 
             return EvaluationResult(
-                outcome="FAIL" if bug_preserved else "PASS",
+                outcome=outcome,
                 buggy_output=buggy_result,
                 fixed_output=fixed_result,
                 coverage=coverage,
                 candidate_size=len(candidate_source),
+                structurally_valid=structurally_valid,
+                semantically_valid=semantically_valid,
+                runtime_ms=(time.perf_counter() - started) * 1000.0,
             )
 
     def oracle(self, candidate_source: str) -> bool:
         """Boolean oracle compatible with hdd_algorithm.py and hdd_baseline.py."""
 
         return self.evaluate(candidate_source).outcome == "FAIL"
+
+    def _classify_outcome(self, buggy: dict, fixed: dict) -> tuple[str, bool, bool]:
+        """Return FAIL/PASS/INVALID without turning unusable inputs into tests."""
+
+        if buggy["kind"] != fixed["kind"]:
+            return "FAIL", True, True
+
+        if buggy["kind"] == "formatted":
+            return (
+                ("FAIL", True, True)
+                if buggy["output"] != fixed["output"]
+                else ("PASS", True, True)
+            )
+
+        if buggy["kind"] == "exception":
+            exceptions_differ = (
+                buggy["exception_type"] != fixed["exception_type"]
+                or buggy["message"] != fixed["message"]
+            )
+            if exceptions_differ:
+                return "FAIL", True, True
+
+            structural_exception_names = {
+                "IndentationError",
+                "InvalidInput",
+                "ParseError",
+                "SyntaxError",
+                "TokenError",
+            }
+            structurally_valid = buggy["exception_type"] not in structural_exception_names
+            return "INVALID", structurally_valid, False
+
+        return (
+            ("FAIL", True, True)
+            if buggy != fixed
+            else ("PASS", True, True)
+        )
 
     # =========================================================
     # Differential oracle
@@ -141,16 +189,8 @@ class Black2Adapter:
         behaviour.
         """
 
-        if buggy["kind"] != fixed["kind"]:
-            return True
-
-        if buggy["kind"] == "formatted":
-            return buggy["output"] != fixed["output"]
-
-        if buggy["kind"] == "exception":
-            return buggy["exception_type"] != fixed["exception_type"] or buggy["message"] != fixed["message"]
-
-        return buggy != fixed
+        outcome, _, _ = self._classify_outcome(buggy, fixed)
+        return outcome == "FAIL"
 
     # =========================================================
     # Execute one Black version

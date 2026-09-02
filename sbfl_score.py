@@ -51,7 +51,9 @@ def aggregate_line_spectrum(records: List[LineCoverageRecord]) -> Dict[int, Line
     return spectrum
 
 
-def _sbfl_score(ef: float, ep: float, nf: float, np_: float, formula: str) -> float:
+def calculate_sbfl_score(ef: float, ep: float, nf: float, np_: float, formula: str) -> float:
+    """Calculate one existing SBFL formula from observed or estimated cells."""
+
     formula = formula.lower()
     if formula == "tarantula":
         fail_ratio = ef / (ef + nf) if (ef + nf) else 0.0
@@ -72,6 +74,10 @@ def _sbfl_score(ef: float, ep: float, nf: float, np_: float, formula: str) -> fl
     raise ValueError(f"unknown SBFL formula: {formula!r}")
 
 
+# Backward-compatible private name used by earlier repository revisions.
+_sbfl_score = calculate_sbfl_score
+
+
 def rank_lines(
     records: List[LineCoverageRecord],
     formula: str = "ochiai",
@@ -80,7 +86,10 @@ def rank_lines(
     """Rank lines by SBFL using the recorded coverage and HDD weights."""
 
     spectrum = aggregate_line_spectrum(records)
-    scored = [(line, _sbfl_score(s.ef, s.ep, s.nf, s.np, formula), s) for line, s in spectrum.items()]
+    scored = [
+        (line, calculate_sbfl_score(s.ef, s.ep, s.nf, s.np, formula), s)
+        for line, s in spectrum.items()
+    ]
     if normalize and scored:
         finite_scores = [score for _, score, _ in scored if math.isfinite(score)]
         max_score = max(finite_scores) if finite_scores else 1.0

@@ -5,7 +5,6 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from bayesian_sbfl import BetaPrior
 from execution_records import ExecutionRecord, Outcome, SourceLocation
 from main_pipeline import collect_local_hdd_execution_records
 from passive_pipeline import analyze_execution_records
@@ -61,11 +60,11 @@ def _record(execution_id, outcome, coverage):
         structurally_valid=True,
         semantically_valid=True,
         runtime_ms=1.0,
-        legacy_weight=1.0,
+        inverse_hdd_weight=1.0,
     )
 
 
-def test_same_records_feed_all_passive_ablation_views_and_budgets():
+def test_same_records_feed_raw_and_deduplicated_views_and_budgets():
     line10 = SourceLocation("engine.py", 10)
     line20 = SourceLocation("engine.py", 20)
     records = (
@@ -78,13 +77,11 @@ def test_same_records_feed_all_passive_ablation_views_and_budgets():
         records,
         formulas=("ochiai",),
         budgets=(2, None),
-        prior=BetaPrior(),
-        monte_carlo_samples=100,
-        random_seed=11,
     )
 
     early, full = analyses
     assert early.original_execution_count == 2
+    assert early.evidence_weighting == "inverse_hdd"
     assert early.raw_evidence_count == 2
     assert early.deduplicated_evidence_count == 1
     assert full.original_execution_count == 3
@@ -92,5 +89,3 @@ def test_same_records_feed_all_passive_ablation_views_and_budgets():
     assert full.deduplicated_evidence_count == 2
     assert full.raw_ranking
     assert full.deduplicated_raw_ranking
-    assert full.posterior_mean_ranking
-    assert full.monte_carlo_ranking

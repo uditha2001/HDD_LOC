@@ -363,6 +363,39 @@ def _load_structured_input(input_path: Optional[str], input_json: Optional[str])
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Run the HDD-LOC pipeline on a buggy/fixed program pair.")
+    parser.add_argument(
+        "--cases",
+        default=None,
+        help="Comma-separated BugsInPy cases; default with no legacy inputs is every selected case.",
+    )
+    parser.add_argument(
+        "--results-dir",
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_results"),
+        help="Directory for all-bugs execution records and analytical reports.",
+    )
+    parser.add_argument(
+        "--partitions",
+        default=None,
+        help=(
+            "Comma-separated minimizers: baseline_hdd, weighted_hdd, ddmin_loc; "
+            "default is all three."
+        ),
+    )
+    parser.add_argument("--case-timeout", type=int, default=30)
+    parser.add_argument(
+        "--ddmin-time-limit",
+        type=float,
+        default=15 * 60,
+        help=(
+            "DDMin-LOC wall-clock limit per bug in seconds; default 900 "
+            "matches the paper's 15-minute evaluation budget."
+        ),
+    )
+    parser.add_argument(
+        "--reuse-execution-records",
+        action="store_true",
+        help="Regenerate reports from existing JSONL records without rerunning HDD.",
+    )
     parser.add_argument("--buggy-program", default=None, help="Path to the buggy program for the local Python pipeline.")
     parser.add_argument("--fixed-program", default=None, help="Path to the fixed program for the local Python pipeline.")
     parser.add_argument("--black2-seed-file", default=None, help="Path to a Black2 source file to reduce inside BugsInPy.")
@@ -396,9 +429,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     faulty_lines=faulty_lines,
                 )
             )
-    else:
+    elif args.buggy_program or args.fixed_program:
         if not args.buggy_program or not args.fixed_program:
-            raise SystemExit("Provide --black2-seed-file or both --buggy-program and --fixed-program.")
+            raise SystemExit("Provide both --buggy-program and --fixed-program.")
         structured_input = _load_structured_input(args.input_file, args.input_json)
         for formula_label, formula_name in FORMULA_SPECS:
             comparison_rows.extend(
@@ -412,6 +445,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     faulty_lines=faulty_lines,
                 )
             )
+    else:
+        from benchmark_suite import run_selected_benchmarks
+
+        case_keys = None
+        if args.cases:
+            case_keys = tuple(part.strip() for part in args.cases.split(",") if part.strip())
+        partitions = None
+        if args.partitions:
+            partitions = tuple(
+                part.strip() for part in args.partitions.split(",") if part.strip()
+            )
+        output = run_selected_benchmarks(
+            case_keys=case_keys,
+            partitions=partitions,
+            results_dir=args.results_dir,
+            timeout=args.case_timeout,
+            ddmin_time_limit_seconds=args.ddmin_time_limit,
+            reuse_execution_records=args.reuse_execution_records,
+        )
+        print(f"Wrote all-bugs HDD-LOC reports to {output}")
+        return 0
 
     fieldnames = [
         "Program",

@@ -37,6 +37,8 @@ def test_recording_oracle_preserves_every_hdd_execution():
     assert [record.execution_id for record in records] == list(range(len(records)))
     assert all(record.coverage == frozenset({location}) for record in records)
     assert all(len(record.input_hash) == 64 for record in records)
+    # The tested two-leaf partition carries HDD's recorded 1 / weight.
+    assert records[1].inverse_hdd_weight == 0.5
 
 
 def test_invalid_candidate_is_distinct_from_pass_but_not_interesting():

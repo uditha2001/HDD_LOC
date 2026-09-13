@@ -90,7 +90,7 @@ class ExecutionRecord:
     structurally_valid: bool
     semantically_valid: bool
     runtime_ms: float
-    legacy_weight: float
+    inverse_hdd_weight: float
 
     @property
     def contributes_spectrum_evidence(self) -> bool:
@@ -99,6 +99,12 @@ class ExecutionRecord:
             and self.structurally_valid
             and self.semantically_valid
         )
+
+    @property
+    def legacy_weight(self) -> float:
+        """Compatibility alias for records created before the field was clarified."""
+
+        return self.inverse_hdd_weight
 
 
 def _canonical_value(value: Any) -> Any:
@@ -214,7 +220,7 @@ def build_execution_records(
                 structurally_valid=evaluation.structurally_valid,
                 semantically_valid=evaluation.semantically_valid,
                 runtime_ms=evaluation.runtime_ms,
-                legacy_weight=float(trial.weight),
+                inverse_hdd_weight=float(trial.weight),
             )
         )
     return tuple(records)
@@ -236,7 +242,7 @@ def _record_to_json(record: ExecutionRecord) -> dict[str, Any]:
         "structurally_valid": record.structurally_valid,
         "semantically_valid": record.semantically_valid,
         "runtime_ms": record.runtime_ms,
-        "legacy_weight": record.legacy_weight,
+        "inverse_hdd_weight": record.inverse_hdd_weight,
     }
 
 
@@ -281,7 +287,9 @@ def read_execution_records_jsonl(input_path: str | Path) -> Tuple[ExecutionRecor
                     structurally_valid=bool(item["structurally_valid"]),
                     semantically_valid=bool(item["semantically_valid"]),
                     runtime_ms=float(item["runtime_ms"]),
-                    legacy_weight=float(item["legacy_weight"]),
+                    inverse_hdd_weight=float(
+                        item.get("inverse_hdd_weight", item.get("legacy_weight"))
+                    ),
                 )
             except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 raise ValueError(f"invalid execution record at {path}:{line_number}") from exc

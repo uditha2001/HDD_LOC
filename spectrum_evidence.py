@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, Iterable, Optional, Sequence, Tuple
+from typing import Dict, FrozenSet, Iterable, Literal, Optional, Sequence, Tuple
 
 from execution_records import ExecutionRecord, Outcome, SourceLocation
 from sbfl_score import calculate_sbfl_score
+
+
+EvidenceWeighting = Literal["unit", "inverse_hdd"]
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,8 @@ class SpectrumEvidence:
     outcome: Outcome
     coverage: FrozenSet[SourceLocation]
     execution_ids: Tuple[int, ...]
+    member_weights: Tuple[float, ...]
+    evidence_weight: float
 
     @property
     def multiplicity(self) -> int:
@@ -25,13 +30,17 @@ class SpectrumEvidence:
 
 @dataclass(frozen=True)
 class ObservedSpectrum:
-    """Unweighted, directly observed counts for one buggy source line."""
+    """Directly observed evidence mass for one buggy source line.
+
+    Values are integer counts under ``unit`` weighting and fractional
+    weighted counts under ``inverse_hdd`` weighting.
+    """
 
     location: SourceLocation
-    ef: int
-    ep: int
-    nf: int
-    np: int
+    ef: float
+    ep: float
+    nf: float
+    np: float
 
 
 @dataclass(frozen=True)
@@ -59,6 +68,7 @@ def build_evidence_pool(
     *,
     deduplicate: bool,
     budget: Optional[int] = None,
+    weighting: EvidenceWeighting = "unit",
 ) -> Tuple[SpectrumEvidence, ...]:
     """Project immutable execution records into a passive evidence pool.
 
@@ -66,31 +76,59 @@ def build_evidence_pool(
     original input sequence but do not enter this pool.
     """
 
+    if weighting not in ("unit", "inverse_hdd"):
+        raise ValueError(f"unknown evidence weighting: {weighting!r}")
+
     selected = select_execution_budget(records, budget)
     valid = [record for record in selected if record.contributes_spectrum_evidence]
+
+    def record_weight(record: ExecutionRecord) -> float:
+        weight = 1.0 if weighting == "unit" else record.inverse_hdd_weight
+        if weight <= 0:
+            raise ValueError(
+                f"execution {record.execution_id} has non-positive evidence weight {weight}"
+            )
+        return weight
+
     if not deduplicate:
         return tuple(
             SpectrumEvidence(
                 outcome=record.outcome,
                 coverage=record.coverage,
                 execution_ids=(record.execution_id,),
+                member_weights=(record_weight(record),),
+                evidence_weight=record_weight(record),
             )
             for record in valid
         )
 
-    grouped: dict[tuple[Outcome, FrozenSet[SourceLocation]], list[int]] = {}
+    grouped: dict[
+        tuple[Outcome, FrozenSet[SourceLocation]],
+        list[tuple[int, float]],
+    ] = {}
     order: list[tuple[Outcome, FrozenSet[SourceLocation]]] = []
     for record in valid:
         key = (record.outcome, record.coverage)
         if key not in grouped:
             grouped[key] = []
             order.append(key)
-        grouped[key].append(record.execution_id)
+        grouped[key].append((record.execution_id, record_weight(record)))
     return tuple(
         SpectrumEvidence(
             outcome=outcome,
             coverage=coverage,
-            execution_ids=tuple(grouped[(outcome, coverage)]),
+            execution_ids=tuple(
+                execution_id for execution_id, _ in grouped[(outcome, coverage)]
+            ),
+            member_weights=tuple(
+                weight for _, weight in grouped[(outcome, coverage)]
+            ),
+            # A duplicate group is one canonical observation. Averaging retains
+            # its typical HDD confidence without summing dependent evidence.
+            evidence_weight=sum(
+                weight for _, weight in grouped[(outcome, coverage)]
+            )
+            / len(grouped[(outcome, coverage)]),
         )
         for outcome, coverage in order
     )
@@ -100,17 +138,29 @@ def aggregate_observed_spectrum(
     evidence: Sequence[SpectrumEvidence],
     line_universe: Optional[Iterable[SourceLocation]] = None,
 ) -> Dict[SourceLocation, ObservedSpectrum]:
-    """Calculate raw ef/ep/nf/np without priors or structural weights."""
+    """Calculate directly observed ef/ep/nf/np evidence mass."""
 
     locations = set(line_universe or ())
     locations.update(location for item in evidence for location in item.coverage)
-    total_failed = sum(1 for item in evidence if item.outcome is Outcome.FAIL)
-    total_passed = sum(1 for item in evidence if item.outcome is Outcome.PASS)
+    total_failed = sum(
+        item.evidence_weight for item in evidence if item.outcome is Outcome.FAIL
+    )
+    total_passed = sum(
+        item.evidence_weight for item in evidence if item.outcome is Outcome.PASS
+    )
 
     spectra: Dict[SourceLocation, ObservedSpectrum] = {}
     for location in sorted(locations):
-        ef = sum(1 for item in evidence if item.outcome is Outcome.FAIL and location in item.coverage)
-        ep = sum(1 for item in evidence if item.outcome is Outcome.PASS and location in item.coverage)
+        ef = sum(
+            item.evidence_weight
+            for item in evidence
+            if item.outcome is Outcome.FAIL and location in item.coverage
+        )
+        ep = sum(
+            item.evidence_weight
+            for item in evidence
+            if item.outcome is Outcome.PASS and location in item.coverage
+        )
         spectra[location] = ObservedSpectrum(
             location=location,
             ef=ef,

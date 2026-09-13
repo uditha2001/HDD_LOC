@@ -26,6 +26,20 @@ Outputs are written under `benchmark_results/`:
 - `all_bugs_rankings.csv`: top-ranked and ground-truth lines with raw spectra.
 - `execution_records/*.jsonl`: every original HDD/DDMin execution before deduplication.
 - `run_config.json`: partitions, budgets, formulas, and cases.
+- `graphs/*.png` and `graphs/*.pdf`: automatically generated comparison figures.
+
+The generated figures include mean EXAM Score and median tie-aware fault rank
+over execution budgets, full-budget Inspect@K rates, EXAM distributions,
+per-bug Ochiai heatmaps, and PASS/FAIL/INVALID balance. `TIME_LIMIT` DDMin runs
+are visibly noted and use only candidates completed before the cutoff. Aggregate
+plots compare only cases present for every displayed approach, preventing a
+missing run from making one approach appear artificially better.
+
+To regenerate graphs from existing CSV reports without rerunning any candidate:
+
+```bash
+python3 benchmark_visualization.py benchmark_results
+```
 
 Use `--reuse-execution-records` to regenerate analytical reports from the
 preserved JSONL data without rerunning Docker candidates. Use `--cases` for a

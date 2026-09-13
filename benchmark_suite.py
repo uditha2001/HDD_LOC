@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence
 
 from benchmark_cases import CASES_BY_KEY, SELECTED_CASES, BenchmarkCase
+from benchmark_visualization import generate_benchmark_graphs
 from ddmin_loc_adapter import run_original_ddmin_loc
 from execution_records import (
     ExecutionRecord,
@@ -516,4 +517,6 @@ def run_selected_benchmarks(
                     print(f"[{case.key}] {partition}: ERROR: {exc}")
 
     _write_aggregate_report(metric_path, output / "aggregate_metrics.csv")
+    generated_graphs = generate_benchmark_graphs(output)
+    print(f"Generated {len(generated_graphs)} graph files in {output / 'graphs'}")
     return output

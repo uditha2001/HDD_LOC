@@ -1,0 +1,50 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local environment / secrets
+.env
+.env.*
+
+# Test / coverage outputs
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific generated outputs
+benchmark_results/
+output/
+tmp/
+*.log
+*.csv
+!black2_results.csv
+!sbfl_results_combined.csv
+!sbfl_score.py

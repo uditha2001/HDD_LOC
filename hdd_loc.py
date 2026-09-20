@@ -6,5 +6,12 @@ but the Defects4J bridge and the line-localization modules expect an
 """
 
 from hdd_algorithm import HDDResult, HierarchicalDeltaDebugger, Node, TestRecord
+from parser_wdd import PythonParserWeightedDeltaDebugger
 
-__all__ = ["HDDResult", "HierarchicalDeltaDebugger", "Node", "TestRecord"]
+__all__ = [
+    "HDDResult",
+    "HierarchicalDeltaDebugger",
+    "PythonParserWeightedDeltaDebugger",
+    "Node",
+    "TestRecord",
+]

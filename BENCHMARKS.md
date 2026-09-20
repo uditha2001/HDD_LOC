@@ -9,7 +9,10 @@ python3 main_pipeline.py
 The command runs every case in `benchmark_cases.py` with three minimizers:
 
 - `baseline_hdd`: non-weighted, count-based HDD partitioning and unit spectrum evidence.
-- `weighted_hdd`: subtree-size HDD partitioning and `1 / weight` spectrum evidence.
+- `weighted_hdd`: parser-preserving, level-based WDD for Python source inputs.
+  It partitions AST statement nodes by lexical token count and emits `1 / weight`
+  spectrum evidence. The older generic subtree-size reducer is retained only for
+  structured non-source inputs and legacy experiments.
 - `ddmin_loc`: the original sibling DDMIN-LOC character-level reducer with
   unit spectrum evidence. Structured seeds are serialized before DDMIN and
   candidates are decoded by the existing semantic adapters.
@@ -65,3 +68,8 @@ The suite uses the actual BugsInPy patches as authoritative ground truth. A
 changed continuation line in a multi-line Python statement is mapped
 statically to the executable statement line recorded by coverage. This mapping
 happens only after candidate generation and ranking.
+
+For direct Black2 source reduction, pass `--black2-seed-file PATH`. That path
+uses `PythonParserWeightedDeltaDebugger`, so every candidate is serialized from
+the Python AST and parsed again before it is evaluated. It never removes source
+lines directly.

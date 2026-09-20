@@ -186,6 +186,11 @@ class HierarchicalDeltaDebugger:
 
         self._reduce_node(self.root)
 
+        # Local WDD is applied while HDD walks bottom-up. A parent-level
+        # reduction can change the context of an already-reduced descendant,
+        # so finish with a global 1-tree-minimality fixpoint.
+        self._ensure_tree_one_minimal()
+
         minimal = self._materialize(self.root, self.active_ids)
         return HDDResult(
             minimal_failing_input=minimal,
@@ -252,7 +257,7 @@ class HierarchicalDeltaDebugger:
     ) -> bool:
         candidate = self._materialize(self.root, active_ids)
         failed = bool(self.oracle(candidate))
-        recorded_weight = 1.0 / weight if weight else 0.0
+        recorded_weight = 1.0 / weight if weight else 1.0
         self._records.append(
             TestRecord(
                 test_id=next(self._test_counter),
@@ -308,8 +313,8 @@ class HierarchicalDeltaDebugger:
 
     def _wddmin_children(self, children: List[Node]) -> None:
         active_children = [c for c in children if c.id in self.active_ids]
-        if len(active_children) <= 1:
-            return  # nothing to partition
+        if not active_children:
+            return
 
         children_by_id = {c.id: c for c in active_children}
         lmin_ids = self._wdd_reduce(children_by_id)
@@ -345,7 +350,7 @@ class HierarchicalDeltaDebugger:
             # Step 2: does some partition's complement (within lmin) still fail?
             for ptn in partitions:
                 complement = [i for i in lmin_ids if i not in ptn]
-                if complement and self._run_container_test(children_by_id, all_ids, complement):
+                if self._run_container_test(children_by_id, all_ids, complement):
                     lmin_ids = complement
                     partitions = [p for p in partitions if p is not ptn]
                     progressed = True
@@ -393,9 +398,9 @@ class HierarchicalDeltaDebugger:
         return best_idx
 
     def _ensure_one_minimal(self, lmin_ids: List[int], children_by_id: Dict[int, Node]) -> List[int]:
-        """Finishing pass: try removing each surviving element individually,
-        to a fixpoint, guaranteeing 1-tree-minimality regardless of what the
-        weighted partitioning search happened to try.
+        """Finishing local WDD pass: try removing each surviving child
+        individually to a fixpoint. Empty containers are valid when the oracle
+        still preserves the failure after removing the final child.
         """
 
         all_ids = list(children_by_id.keys())
@@ -404,15 +409,62 @@ class HierarchicalDeltaDebugger:
             changed = False
             for cid in list(lmin_ids):
                 candidate = [i for i in lmin_ids if i != cid]
-                if not candidate:
-                    continue  # never test an empty container
                 if self._run_container_test(children_by_id, all_ids, candidate):
                     lmin_ids = candidate
                     changed = True
                     break
         return lmin_ids
 
-    def _run_container_test(self, children_by_id: Dict[int, Node], all_ids: List[int], keep_ids: List[int]) -> bool:
+    def _ensure_tree_one_minimal(self) -> None:
+        """Remove any single active tree node (and its subtree) whose removal
+        still preserves the failure.
+
+        Local WDD/ensureOneMinimal guarantees minimality for the sibling set
+        being processed. Because this HDD implementation is bottom-up, a
+        later parent reduction can change the oracle context of a descendant.
+        This global fixpoint closes that gap.
+        """
+
+        if self.root is None:
+            return
+
+        while True:
+            changed = False
+            candidates = sorted(
+                (
+                    node
+                    for node in self.nodes.values()
+                    if node.id != self.root.id and node.id in self.active_ids
+                ),
+                key=lambda node: (node.depth, node.id),
+            )
+
+            for node in candidates:
+                if node.id not in self.active_ids:
+                    continue
+
+                candidate_active = self.active_ids - set(self._subtree_ids[node.id])
+                weight = self._weight_of(node)
+
+                if self._run_test(
+                    candidate_active,
+                    trial_node_id=node.id,
+                    trial_depth=node.depth,
+                    weight=weight,
+                ):
+                    self.active_ids = candidate_active
+                    changed = True
+                    break
+
+            if not changed:
+                return
+
+    def _run_container_test(
+        self,
+        children_by_id: Dict[int, Node],
+        all_ids: List[int],
+        keep_ids: List[int],
+    ) -> bool:
         """Run one property test: within this container, keep exactly the
         children in keep_ids (and their subtrees); everything outside this
         container stays exactly as active_ids already has it. The test's
@@ -421,20 +473,34 @@ class HierarchicalDeltaDebugger:
         by how much of the input it actually targeted.
         """
 
+        # Use only currently active descendants. The original subtree index
+        # contains nodes that may already have been deleted by a lower HDD
+        # level; reusing it directly would resurrect those nodes in a trial.
+        current_subtree_ids: Dict[int, Set[int]] = {
+            cid: set(self._subtree_ids[cid]) & self.active_ids
+            for cid in all_ids
+        }
+
         remove_all: Set[int] = set()
         for cid in all_ids:
-            remove_all |= self._subtree_ids[cid]
+            remove_all |= current_subtree_ids[cid]
         base_active = self.active_ids - remove_all
 
         keep_subtree_ids: Set[int] = set()
         for cid in keep_ids:
-            keep_subtree_ids |= self._subtree_ids[cid]
+            keep_subtree_ids |= current_subtree_ids[cid]
 
         trial_active = base_active | keep_subtree_ids
         trial_node_id = keep_ids[0] if len(keep_ids) == 1 else None
         trial_depth = children_by_id[all_ids[0]].depth if all_ids else None
         weight = sum(self._weight_of(children_by_id[cid]) for cid in keep_ids)
-        return self._run_test(trial_active, trial_node_id=trial_node_id, trial_depth=trial_depth, weight=weight)
+
+        return self._run_test(
+            trial_active,
+            trial_node_id=trial_node_id,
+            trial_depth=trial_depth,
+            weight=weight,
+        )
 
 
 # --------------------------------------------------------------------------

@@ -19,6 +19,7 @@ from black2_adapter import FIXED_ROOT as BLACK2_FIXED_ROOT
 from black2_adapter import Black2Adapter
 from hdd_baseline import HierarchicalDeltaDebugger as HDDBaselineDebugger
 from hdd_algorithm import HDDResult, HierarchicalDeltaDebugger
+from parser_wdd import PythonParserWeightedDeltaDebugger
 from line_localization import LineCoverageRecord as WeightedLineCoverageRecord
 from line_localization import collect_line_coverage, test_cases_from_hdd_result
 from line_localization_baseline import collect_line_coverage as collect_line_coverage_baseline
@@ -117,7 +118,7 @@ def build_black2_oracle(
 
     def oracle(candidate: Any) -> bool:
         return adapter.oracle(_candidate_to_source(candidate))
-
+        
     return oracle, adapter
 
 
@@ -178,6 +179,41 @@ def collect_black2_hdd_execution_records(
     oracle = RecordingOracle(evaluator, serializer=_candidate_to_source)
     debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting=weighting)
     result = debugger.reduce(structured_input)
+    records = build_execution_records(result, oracle.observations)
+    if records_output_path is not None:
+        write_execution_records_jsonl(records, records_output_path)
+    return result, records
+
+
+def collect_black2_parser_wdd_execution_records(
+    source: str,
+    buggy_root: Optional[str] = None,
+    fixed_root: Optional[str] = None,
+    timeout: int = 30,
+    records_output_path: Optional[str] = None,
+) -> Tuple[HDDResult, Tuple[ExecutionRecord, ...]]:
+    """Run parser-preserving WDD/HDD on a Python source program once."""
+
+    adapter = Black2Adapter(
+        buggy_root=buggy_root or BLACK2_BUGGY_ROOT,
+        fixed_root=fixed_root or BLACK2_FIXED_ROOT,
+        timeout=timeout,
+        collect_coverage=True,
+    )
+
+    def evaluator(candidate: str) -> CandidateEvaluation:
+        result = adapter.evaluate(candidate)
+        return CandidateEvaluation(
+            outcome=Outcome(result.outcome),
+            coverage=frozenset(SourceLocation(filename, line) for filename, line in result.coverage),
+            structurally_valid=result.structurally_valid,
+            semantically_valid=result.semantically_valid,
+            runtime_ms=result.runtime_ms,
+        )
+
+    oracle = RecordingOracle(evaluator, serializer=lambda candidate: candidate)
+    debugger = PythonParserWeightedDeltaDebugger(oracle=oracle)
+    result = debugger.reduce(source)
     records = build_execution_records(result, oracle.observations)
     if records_output_path is not None:
         write_execution_records_jsonl(records, records_output_path)
@@ -286,6 +322,7 @@ def _run_weighted_and_baseline(
 
 def _run_black2_weighted_and_baseline(
     structured_input: Any,
+    source: Optional[str],
     seed_path: str,
     buggy_root: Optional[str],
     fixed_root: Optional[str],
@@ -302,8 +339,10 @@ def _run_black2_weighted_and_baseline(
         collect_coverage=collect_coverage,
     )
 
-    weighted_debugger = HierarchicalDeltaDebugger(oracle=oracle, weighting="subtree_size")
-    weighted_result = weighted_debugger.reduce(structured_input)
+    # Source benchmarks use the parser reducer.  The line-list representation
+    # remains solely for the legacy, deliberately non-parser baseline.
+    weighted_debugger = PythonParserWeightedDeltaDebugger(oracle=oracle)
+    weighted_result = weighted_debugger.reduce(source if source is not None else _candidate_to_source(structured_input))
     weighted_cases = test_cases_from_hdd_result(weighted_result, weighted_debugger)
     weighted_coverage = _evaluate_black2_test_cases(adapter, weighted_cases, weighted=True)
     weighted_ranking = rank_lines(weighted_coverage, formula=formula_name, normalize=True)
@@ -413,12 +452,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     comparison_rows: List[Dict[str, Any]] = []
     if args.black2_seed_file:
         with open(args.black2_seed_file, "r", encoding="utf-8") as f:
-            structured_input = _black2_source_to_structured_input(f.read())
+            source = f.read()
+            structured_input = _black2_source_to_structured_input(source)
 
         for formula_label, formula_name in FORMULA_SPECS:
             comparison_rows.extend(
                 _run_black2_weighted_and_baseline(
                     structured_input=structured_input,
+                    source=source,
                     seed_path=args.black2_seed_file,
                     buggy_root=args.black2_buggy_root,
                     fixed_root=args.black2_fixed_root,

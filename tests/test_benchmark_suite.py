@@ -35,7 +35,7 @@ def test_ranking_metrics_report_ties_and_exam_score():
 
 
 def test_all_comparison_partitions_are_enabled_by_default():
-    assert PARTITIONS == ("baseline_hdd", "weighted_hdd", "ddmin_loc")
+    assert PARTITIONS == ("baseline_hdd", "weighted_hdd", "ddmin_loc", "hdd_ddmin_loc")
     assert DEFAULT_DDMIN_TIME_LIMIT_SECONDS == 900
 
 

@@ -13,26 +13,30 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 
-PARTITION_ORDER = ("baseline_hdd", "weighted_hdd", "ddmin_loc")
+PARTITION_ORDER = ("baseline_hdd", "weighted_hdd", "ddmin_loc", "hdd_ddmin_loc")
 PARTITION_LABELS = {
     "baseline_hdd": "Baseline HDD",
     "weighted_hdd": "Weighted HDD-LOC",
     "ddmin_loc": "DDMin-LOC",
+    "hdd_ddmin_loc": "HDD + DDMin-LOC",
 }
 PARTITION_COLORS = {
     "baseline_hdd": "#0072B2",
     "weighted_hdd": "#D55E00",
     "ddmin_loc": "#009E73",
+    "hdd_ddmin_loc": "#CC79A7",
 }
 PARTITION_MARKERS = {
     "baseline_hdd": "o",
     "weighted_hdd": "s",
     "ddmin_loc": "^",
+    "hdd_ddmin_loc": "D",
 }
 PARTITION_LINESTYLES = {
     "baseline_hdd": "-",
     "weighted_hdd": "--",
     "ddmin_loc": ":",
+    "hdd_ddmin_loc": "-.",
 }
 FORMULA_ORDER = ("ochiai", "jaccard", "tarantula", "dstar2")
 METHOD_ORDER = ("raw_sbfl", "deduplicated_raw_sbfl")

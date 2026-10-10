@@ -416,8 +416,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "--partitions",
         default=None,
         help=(
-            "Comma-separated minimizers: baseline_hdd, weighted_hdd, ddmin_loc; "
-            "default is all three."
+            "Comma-separated minimizers: baseline_hdd, weighted_hdd, ddmin_loc, hdd_ddmin_loc; "
+            "default is all four."
         ),
     )
     parser.add_argument("--case-timeout", type=int, default=30)

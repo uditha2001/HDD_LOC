@@ -26,10 +26,11 @@ from execution_records import (
 from ground_truth import deleted_buggy_lines, executable_ground_truth
 from hdd_algorithm import HierarchicalDeltaDebugger as WeightedHDD
 from hdd_baseline import HierarchicalDeltaDebugger as BaselineHDD
+from hdd_ddmin_loc import HDDDDMinLocDebugger
 from passive_pipeline import DEFAULT_EXECUTION_BUDGETS, PassiveAnalysis, analyze_execution_records
 
 
-PARTITIONS = ("baseline_hdd", "weighted_hdd", "ddmin_loc")
+PARTITIONS = ("baseline_hdd", "weighted_hdd", "ddmin_loc", "hdd_ddmin_loc")
 DEFAULT_DDMIN_TIME_LIMIT_SECONDS = 15 * 60
 
 
@@ -149,6 +150,8 @@ def _collect_records(
         debugger = BaselineHDD(oracle=oracle)
     elif partition == "weighted_hdd":
         debugger = WeightedHDD(oracle=oracle, weighting="subtree_size")
+    elif partition == "hdd_ddmin_loc":
+        debugger = HDDDDMinLocDebugger(oracle=oracle)
     else:
         raise ValueError(f"unknown HDD partition: {partition}")
     result = debugger.reduce(runtime.structured_input)
@@ -382,9 +385,7 @@ def run_selected_benchmarks(
                     write_execution_records_jsonl(
                         records, record_path
                     )
-                    weighting = (
-                        "inverse_hdd" if partition == "weighted_hdd" else "unit"
-                    )
+                    weighting = "inverse_hdd" if partition == "weighted_hdd" else "unit"
                     analyses = analyze_execution_records(
                         records,
                         formulas=formulas,

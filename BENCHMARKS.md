@@ -6,7 +6,7 @@ Run the complete configured suite from this directory with:
 python3 main_pipeline.py
 ```
 
-The command runs every case in `benchmark_cases.py` with three minimizers:
+The command runs every case in `benchmark_cases.py` with four minimizers:
 
 - `baseline_hdd`: non-weighted, count-based HDD partitioning and unit spectrum evidence.
 - `weighted_hdd`: parser-preserving, level-based WDD for Python source inputs.
@@ -16,8 +16,11 @@ The command runs every case in `benchmark_cases.py` with three minimizers:
 - `ddmin_loc`: the original sibling DDMIN-LOC character-level reducer with
   unit spectrum evidence. Structured seeds are serialized before DDMIN and
   candidates are decoded by the existing semantic adapters.
+- `hdd_ddmin_loc`: baseline HDD tree traversal with the original DDMIN-LOC
+  core minimizing each active sibling set. It retains baseline HDD's unit
+  spectrum evidence and does not use WDD weights.
 
-All three runs are analyzed at execution budgets 5, 10, 20, 30, 50, and full with
+All four runs are analyzed at execution budgets 5, 10, 20, 30, 50, and full with
 raw SBFL and deduplicated raw SBFL. The available formulas are Ochiai, Jaccard,
 Tarantula, and DStar.
 

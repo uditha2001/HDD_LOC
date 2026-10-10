@@ -34,7 +34,7 @@ def test_graphs_are_generated_from_reports_and_include_time_limited_data(tmp_pat
     metric_rows = []
     for case_index, case in enumerate(("black_1", "tqdm_1"), 1):
         for partition_index, partition in enumerate(
-            ("baseline_hdd", "weighted_hdd", "ddmin_loc"), 1
+            ("baseline_hdd", "weighted_hdd", "ddmin_loc", "hdd_ddmin_loc"), 1
         ):
             for budget in (5, "full"):
                 metric_rows.append(
@@ -66,7 +66,7 @@ def test_graphs_are_generated_from_reports_and_include_time_limited_data(tmp_pat
                     }
                 )
     status_rows = []
-    for partition in ("baseline_hdd", "weighted_hdd", "ddmin_loc"):
+    for partition in ("baseline_hdd", "weighted_hdd", "ddmin_loc", "hdd_ddmin_loc"):
         status_rows.append(
             {
                 "case": "tqdm_1",

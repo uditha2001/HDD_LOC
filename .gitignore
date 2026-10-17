@@ -39,12 +39,4 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Project-specific generated outputs
-benchmark_results/
-output/
-tmp/
-*.log
-*.csv
-!black2_results.csv
-!sbfl_results_combined.csv
-!sbfl_score.py
+

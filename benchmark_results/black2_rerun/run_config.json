@@ -1,0 +1,24 @@
+{
+  "budgets": [
+    5,
+    10,
+    20,
+    30,
+    50,
+    "full"
+  ],
+  "cases": [
+    "black_2"
+  ],
+  "formulas": [
+    "ochiai",
+    "jaccard",
+    "tarantula",
+    "dstar2"
+  ],
+  "ground_truth_usage": "evaluation only after ranking",
+  "partitions": [
+    "baseline_hdd",
+    "weighted_hdd"
+  ]
+}

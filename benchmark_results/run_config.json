@@ -1,0 +1,38 @@
+{
+  "budgets": [
+    5,
+    10,
+    20,
+    30,
+    50,
+    "full"
+  ],
+  "cases": [
+    "black_1",
+    "black_2",
+    "black_3",
+    "tornado_1",
+    "tornado_2",
+    "tornado_3",
+    "tornado_4",
+    "youtube-dl_1",
+    "youtube-dl_2",
+    "tqdm_1",
+    "tqdm_2",
+    "luigi_1"
+  ],
+  "ddmin_time_limit_seconds": 900,
+  "formulas": [
+    "ochiai",
+    "jaccard",
+    "tarantula",
+    "dstar2"
+  ],
+  "ground_truth_usage": "evaluation only after ranking",
+  "partitions": [
+    "baseline_hdd",
+    "weighted_hdd",
+    "ddmin_loc",
+    "hdd_ddmin_loc"
+  ]
+}

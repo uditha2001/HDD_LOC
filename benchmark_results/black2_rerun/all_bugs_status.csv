@@ -1,0 +1,3 @@
+case,project,bug_id,primary_module,actual_fault_category,input_kind,partition,status,message,executions,fail,pass,invalid,minimal_input,runtime_seconds
+black_2,black,2,black.py,format-toggle state logic,Python concrete-syntax construct tree,baseline_hdd,COMPLETED,,23,6,16,1,"{'document': {'first_example': {'fmt_off': '# fmt: off\n', 'decorator': '@test([\n    1, 2,\n    3, 4,\n])\n', 'fmt_on': '# fmt: on\n', 'function': 'def f(): pass\n\n'}}}",24.15989082499982
+black_2,black,2,black.py,format-toggle state logic,Python concrete-syntax construct tree,weighted_hdd,COMPLETED,,23,6,16,1,"{'document': {'first_example': {'fmt_off': '# fmt: off\n', 'decorator': '@test([\n    1, 2,\n    3, 4,\n])\n', 'fmt_on': '# fmt: on\n', 'function': 'def f(): pass\n\n'}}}",16.142913681998834

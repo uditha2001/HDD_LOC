@@ -1,0 +1,4 @@
+case,project,bug_id,primary_module,actual_fault_category,input_kind,partition,status,message,executions,fail,pass,invalid,minimal_input,runtime_seconds
+tqdm_1,tqdm,1,tqdm/contrib/__init__.py,enumeration start semantics,iteration-options tree,baseline_hdd,COMPLETED,,10,4,6,0,"{'iterable': [0], 'start': 42}",37.66446333199997
+tqdm_1,tqdm,1,tqdm/contrib/__init__.py,enumeration start semantics,iteration-options tree,weighted_hdd,COMPLETED,,10,4,6,0,"{'iterable': [0], 'start': 42}",5.049065454999891
+tqdm_1,tqdm,1,tqdm/contrib/__init__.py,enumeration start semantics,iteration-options tree,ddmin_loc,COMPLETED,,138,4,43,91,"'{""iterable"":[0],""start"":2}'",26.25938543899997
